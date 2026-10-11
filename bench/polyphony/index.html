@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>dj-video polyphony benchmark</title>
+		<style>
+			body {
+				font-family: system-ui, sans-serif;
+				margin: 2rem;
+			}
+			table {
+				border-collapse: collapse;
+				margin: 1rem 0;
+			}
+			th,
+			td {
+				border: 1px solid #ccc;
+				padding: 0.3rem 0.6rem;
+				text-align: left;
+			}
+			canvas {
+				background: black;
+				width: 960px;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Polyphony benchmark</h1>
+		<p>
+			Many voices play at the same time. Each voice uses one clip and jumps to a random position
+			every 125 ms, together with all other voices. All voices draw into one WebGL2 canvas.
+		</p>
+		<ul>
+			<li>
+				<b>On time</b>: part of (voice × animation frame) where the planned frame is on screen.
+			</li>
+			<li><b>Frames / s</b>: frames delivered / frames needed, for all voices together.</li>
+			<li><b>Latency</b>: time from frame request until the frame is in its texture.</li>
+			<li>
+				<b>Longest tick gap</b>: longest time between two animation frames. More than ~17 ms is a
+				dropped display frame.
+			</li>
+		</ul>
+		<button id="run">Run</button>
+		<p id="status"></p>
+		<table id="results">
+			<thead>
+				<tr>
+					<th>Setup</th>
+					<th>Voices</th>
+					<th>On time</th>
+					<th>Frames / s</th>
+					<th>Latency p95</th>
+					<th>Latency max</th>
+					<th>Median tick gap</th>
+					<th>Longest tick gap</th>
+					<th>Longest tick work</th>
+					<th>Errors</th>
+				</tr>
+			</thead>
+			<tbody></tbody>
+		</table>
+		<canvas id="grid" width="1280" height="720"></canvas>
+		<script type="module" src="./main.ts"></script>
+	</body>
+</html>

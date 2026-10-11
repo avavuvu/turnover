@@ -9,10 +9,11 @@
 		"allowJs": true,
 		"noEmit": true,
 		"isolatedModules": true,
+		"resolveJsonModule": true,
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
 		"skipLibCheck": true,
 		"sourceMap": true
 	},
-	"include": ["src", "static/strudel.js"]
+	"include": ["src", "bench", "static/strudel.js"]
 }

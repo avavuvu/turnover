@@ -7,6 +7,7 @@
 		"dev": "vite",
 		"build": "vite build",
 		"preview": "vite preview",
+		"add-clip": "bun scripts/add-clip.ts",
 		"check": "tsc --noEmit",
 		"lint": "prettier --check .",
 		"format": "prettier --write ."
@@ -18,6 +19,7 @@
 	},
 	"dependencies": {
 		"@strudel/repl": "^1.3.0",
+		"@tonaljs/tonal": "^4.10.0",
 		"mp4box": "^2.3.0"
 	}
 }

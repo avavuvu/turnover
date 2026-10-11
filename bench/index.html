@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>dj-video seek benchmark</title>
+		<style>
+			body {
+				font-family: system-ui, sans-serif;
+				margin: 2rem;
+			}
+			table {
+				border-collapse: collapse;
+				margin: 1rem 0;
+			}
+			th,
+			td {
+				border: 1px solid #ccc;
+				padding: 0.3rem 0.6rem;
+				text-align: left;
+			}
+			.frames {
+				display: flex;
+				gap: 1rem;
+			}
+			canvas {
+				width: 480px;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Seek benchmark</h1>
+		<p>
+			Time from seek request until the target frame is ready. WebCodecs: decode from the previous
+			keyframe to the target, then flush. HAP: Snappy decompress, BC1 upload, draw, and GPU sync.
+		</p>
+		<button id="run">Run</button>
+		<p id="status"></p>
+		<table id="results">
+			<thead>
+				<tr>
+					<th>Format</th>
+					<th>File size</th>
+					<th>Fetch + index</th>
+					<th>Median</th>
+					<th>p95</th>
+					<th>Max</th>
+					<th>Frames decoded / seek</th>
+					<th>Notes</th>
+				</tr>
+			</thead>
+			<tbody></tbody>
+		</table>
+		<div class="frames">
+			<figure>
+				<canvas id="webcodecs-canvas"></canvas>
+				<figcaption>Last WebCodecs frame</figcaption>
+			</figure>
+			<figure>
+				<canvas id="hap-canvas"></canvas>
+				<figcaption>Last HAP frame (WebGL2 BC1)</figcaption>
+			</figure>
+		</div>
+		<script type="module" src="./main.ts"></script>
+	</body>
+</html>
