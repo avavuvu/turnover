@@ -13,6 +13,7 @@ export type PictureRequest = {
 const MAX_VOICES = 32;
 const FRAME_LEAD_MS = 25;
 const RENDER_SCALE = 0.8;
+const MAX_PLACEMENTS = 256;
 
 type LoadedClip = {
 	media: ClipMedia;
@@ -49,21 +50,15 @@ export class VideoSampler {
 	private getClock: (() => AudioContext) | null = null;
 	private voices: Voice[] = [];
 	private animationFrame = 0;
+	private pixelRatio = 1;
 
 	constructor(canvas: HTMLCanvasElement) {
 		this.compositor = new Compositor(canvas);
 	}
 
-	async load(urls: Record<string, string>) {
-		const results = await Promise.allSettled(
-			Object.entries(urls).map(async ([clipName, url]) => {
-				const media = await loadClipMedia(url);
-				this.clips.set(clipName, { media, decoder: new ClipDecoder(media) });
-			})
-		);
-		for (const result of results) {
-			if (result.status === "rejected") console.error(result.reason);
-		}
+	async load(clipName: string, url: string) {
+		const media = await loadClipMedia(url);
+		this.clips.set(clipName, { media, decoder: new ClipDecoder(media) });
 	}
 
 	useClock(getClock: () => AudioContext) {
@@ -79,8 +74,9 @@ export class VideoSampler {
 		for (const clip of this.clips.values()) clip.decoder.close();
 	}
 
-	resize(width: number, height: number) {
-		this.compositor.resize(width, height);
+	resize(width: number, height: number, pixelRatio: number) {
+		this.pixelRatio = pixelRatio;
+		this.compositor.resize(Math.round(width * pixelRatio), Math.round(height * pixelRatio));
 	}
 
 	play(request: PictureRequest) {
@@ -182,8 +178,9 @@ export class VideoSampler {
 	}
 
 	private drawItem(voice: Voice): DrawItem {
-		const width = voice.clip.media.width * RENDER_SCALE;
-		const height = voice.clip.media.height * RENDER_SCALE;
+		const scale = RENDER_SCALE * this.pixelRatio;
+		const width = voice.clip.media.width * scale;
+		const height = voice.clip.media.height * scale;
 		return {
 			texture: voice.texture,
 			width,
@@ -199,6 +196,9 @@ export class VideoSampler {
 		if (!placement) {
 			placement = { xFraction: Math.random(), yFraction: Math.random() };
 			this.placements.set(key, placement);
+			if (this.placements.size > MAX_PLACEMENTS) {
+				this.placements.delete(this.placements.keys().next().value!);
+			}
 		}
 		return placement;
 	}

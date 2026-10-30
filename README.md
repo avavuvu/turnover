@@ -53,6 +53,9 @@ only `originals/` and `clips.json`):
 | `bun run rebuild-clips mack oklou` | Rebuild some clips               |
 | `bun run rebuild-clips --missing`  | Only clips with no playback file |
 
+The app reads `library/` when the page loads, so reload the page after adding a clip.
+`bun run build` does not copy the library; serve `library/` next to the built files.
+
 ## Playing clips in Strudel
 
 | Code                                 | What it does                               |
@@ -71,7 +74,8 @@ only `originals/` and `clips.json`):
 - Other Strudel sound controls (`gain`, `lpf`, `room`, …) apply to the clip's audio.
 - `clips` holds the library, so `clips.mack.tempoBpm` gives a clip's tempo.
 
-Problems such as an unknown clip name are reported in the browser console.
+Loading progress and problems, such as an unknown clip name, appear in the bottom-right corner.
+Warnings fade after a few seconds; click an error to dismiss it.
 
 ## Scripts
 

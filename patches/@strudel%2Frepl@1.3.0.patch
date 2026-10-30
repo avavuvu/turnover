@@ -1,0 +1,18 @@
+diff --git a/dist/index-1NNF4L0p.js b/dist/index-1NNF4L0p.js
+index dded4abb4ba009933974c0fcdf16d4bb238825c2..1de02dd31dc542b18e3c6931b34d92a1012ca478 100644
+--- a/dist/index-1NNF4L0p.js
++++ b/dist/index-1NNF4L0p.js
+@@ -1,3 +1,4 @@
++const reversedBuffers = new WeakMap();
+ const pg = "strudel.log";
+ let u4 = 1e3, $1, U1;
+ function sc(t, e = "cyclist") {
+@@ -15138,7 +15139,7 @@ const DA = async (t, e, n) => {
+   return t.unit === "c" && (a = a * o.duration), { buffer: o, playbackRate: a };
+ }, AA = async (t, e, n) => {
+   let { buffer: s, playbackRate: r } = await DA(t, e, n);
+-  t.speed < 0 && (s = GA(s));
++  t.speed < 0 && (reversedBuffers.has(s) || reversedBuffers.set(s, GA(s)), s = reversedBuffers.get(s));
+   const i = st().createBufferSource();
+   i.buffer = s, i.playbackRate.value = r;
+   const { loopBegin: o = 0, loopEnd: l = 1, begin: c = 0, end: u = 1 } = t, h = i.buffer.duration, f = c * h;

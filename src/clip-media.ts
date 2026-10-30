@@ -1,5 +1,7 @@
 import { BufferSource, EncodedPacketSink, Input, MP4 } from "mediabunny";
 
+import { fetchFile } from "./fetch-file";
+
 export type ClipSample = {
 	data: Uint8Array;
 	timestampMicros: number;
@@ -15,9 +17,7 @@ export type ClipMedia = {
 };
 
 export async function loadClipMedia(url: string): Promise<ClipMedia> {
-	const response = await fetch(url);
-	if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
-
+	const response = await fetchFile(url);
 	const input = new Input({
 		source: new BufferSource(await response.arrayBuffer()),
 		formats: [MP4]
