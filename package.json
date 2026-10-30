@@ -8,11 +8,13 @@
 		"build": "vite build",
 		"preview": "vite preview",
 		"add-clip": "bun scripts/add-clip.ts",
-		"check": "tsc --noEmit",
+		"rebuild-clips": "bun scripts/rebuild-clips.ts",
+		"check": "tsc --noEmit && tsc --noEmit -p scripts",
 		"lint": "prettier --check .",
 		"format": "prettier --write ."
 	},
 	"devDependencies": {
+		"@types/node": "^26.6.6",
 		"prettier": "^3.8.1",
 		"typescript": "^6.0.2",
 		"vite": "^8.0.7"

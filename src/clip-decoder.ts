@@ -1,4 +1,4 @@
-import type { Clip } from "./clip";
+import type { ClipMedia } from "./clip-media";
 
 type PendingFrame = {
 	resolve(frame: VideoFrame): void;
@@ -10,7 +10,7 @@ export class ClipDecoder {
 	private readonly pending = new Map<number, PendingFrame>();
 	private nextRequestId = 0;
 
-	constructor(private readonly clip: Clip) {}
+	constructor(private readonly media: ClipMedia) {}
 
 	decode(sampleIndex: number): Promise<VideoFrame> {
 		const requestId = this.nextRequestId++;
@@ -22,7 +22,7 @@ export class ClipDecoder {
 				new EncodedVideoChunk({
 					type: "key",
 					timestamp: requestId,
-					data: this.clip.samplesInPresentationOrder[sampleIndex].data
+					data: this.media.samplesInPresentationOrder[sampleIndex].data
 				})
 			);
 		});
@@ -38,12 +38,12 @@ export class ClipDecoder {
 		const decoder = new VideoDecoder({
 			output: (frame) => this.deliver(frame),
 			error: (error) => {
-				console.error(`${this.clip.url}:`, error);
+				console.error(`${this.media.url}:`, error);
 				this.decoder = null;
 				this.failPending(error);
 			}
 		});
-		decoder.configure(this.clip.decoderConfig);
+		decoder.configure(this.media.decoderConfig);
 		this.decoder = decoder;
 		return decoder;
 	}

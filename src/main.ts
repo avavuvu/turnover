@@ -3,7 +3,7 @@ import "@strudel/repl";
 
 import { VideoSampler } from "./sampler";
 import type { StrudelEditorElement } from "./strudel-scope";
-import { setupStrudel, videos } from "./video.strudel";
+import { clipUrls, setupStrudel } from "./strudel-clips";
 
 const canvas = document.querySelector<HTMLCanvasElement>("#video-canvas")!;
 const strudelEditor = document.querySelector<StrudelEditorElement>("strudel-editor")!;
@@ -14,13 +14,13 @@ function fitCanvasToWindow() {
 	sampler.resize(window.innerWidth, window.innerHeight);
 }
 
-async function loadVideos() {
+async function loadClips() {
 	canvas.hidden = false;
 	fitCanvasToWindow();
 	window.addEventListener("resize", fitCanvasToWindow);
 	window.addEventListener("beforeunload", () => sampler.stop());
 	sampler.start();
-	await sampler.load(videos);
+	await sampler.load(clipUrls());
 }
 
 async function loadStrudelPrelude() {
@@ -32,5 +32,5 @@ async function loadStrudelPrelude() {
 	sampler.useClock(() => scope.getAudioContext());
 }
 
-loadVideos().catch(console.error);
+loadClips().catch(console.error);
 loadStrudelPrelude().catch(console.error);

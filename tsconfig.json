@@ -6,14 +6,12 @@
 		"moduleResolution": "bundler",
 		"types": ["vite/client"],
 		"strict": true,
-		"allowJs": true,
 		"noEmit": true,
 		"isolatedModules": true,
 		"resolveJsonModule": true,
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
-		"skipLibCheck": true,
-		"sourceMap": true
+		"skipLibCheck": true
 	},
-	"include": ["src", "bench", "static/strudel.js"]
+	"include": ["src"]
 }

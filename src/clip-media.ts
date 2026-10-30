@@ -5,7 +5,7 @@ export type ClipSample = {
 	timestampMicros: number;
 };
 
-export type Clip = {
+export type ClipMedia = {
 	url: string;
 	width: number;
 	height: number;
@@ -80,14 +80,14 @@ function readVideoTrack(url: string, buffer: ArrayBuffer) {
 	};
 }
 
-export async function loadClip(url: string): Promise<Clip> {
+export async function loadClipMedia(url: string): Promise<ClipMedia> {
 	const response = await fetch(url);
 	if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
 	return { url, ...readVideoTrack(url, await response.arrayBuffer()) };
 }
 
-export function sampleIndexAt(clip: Clip, timeMicros: number): number {
-	const samples = clip.samplesInPresentationOrder;
+export function sampleIndexAt(media: ClipMedia, timeMicros: number): number {
+	const samples = media.samplesInPresentationOrder;
 	let low = 0;
 	let high = samples.length - 1;
 	let found = 0;

@@ -1,5 +1,6 @@
 node_modules
 /dist
+/library
 
 .DS_Store
 Thumbs.db
@@ -8,5 +9,6 @@ Thumbs.db
 .env.*
 !.env.example
 
+*.partial
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*

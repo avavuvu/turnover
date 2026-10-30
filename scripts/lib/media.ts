@@ -1,10 +1,5 @@
+import type { EncodeSettings } from "../../src/clip-info";
 import { runBinary, runText, runVisible } from "./run";
-
-export type EncodeOptions = {
-	maxHeight: number;
-	startSeconds?: number;
-	endSeconds?: number;
-};
 
 export type VideoProbe = {
 	width: number;
@@ -13,12 +8,12 @@ export type VideoProbe = {
 	durationSeconds: number;
 };
 
-export function encodeAllIntra(input: string, output: string, options: EncodeOptions) {
+export function encodeAllIntra(input: string, output: string, settings: EncodeSettings) {
 	const trim = [
-		...(options.startSeconds !== undefined ? ["-ss", String(options.startSeconds)] : []),
-		...(options.endSeconds !== undefined ? ["-to", String(options.endSeconds)] : [])
+		...(settings.startSeconds !== undefined ? ["-ss", String(settings.startSeconds)] : []),
+		...(settings.endSeconds !== undefined ? ["-to", String(settings.endSeconds)] : [])
 	];
-	const scale = `scale=-2:'trunc(min(${options.maxHeight},ih)/2)*2',setsar=1`;
+	const scale = `scale=-2:'trunc(min(${settings.maxHeight},ih)/2)*2',setsar=1`;
 
 	runVisible("ffmpeg", [
 		"-hide_banner",
@@ -59,6 +54,21 @@ export function encodeAllIntra(input: string, output: string, options: EncodeOpt
 		"mp4",
 		output
 	]);
+}
+
+export function hasAudio(file: string): boolean {
+	const output = runText("ffprobe", [
+		"-v",
+		"error",
+		"-select_streams",
+		"a",
+		"-show_entries",
+		"stream=index",
+		"-of",
+		"csv=p=0",
+		file
+	]);
+	return output.trim().length > 0;
 }
 
 export function probeVideo(file: string): VideoProbe {

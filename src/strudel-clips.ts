@@ -1,13 +1,13 @@
-import clips from "./videos/clips.json";
+import library from "../library/clips.json";
+import type { ClipInfo, ClipLibrary } from "./clip-info";
 import { normaliseKey, resolvePlaybackRange } from "./clip-position";
 import type { PictureRequest } from "./sampler";
 import { type Hap, strudelScope, type StrudelScope } from "./strudel-scope";
 
-type ClipRecord = (typeof clips)[keyof typeof clips];
-export type Video = ClipRecord & { file: string };
+export type Clip = ClipInfo & { url: string };
 
 type ClipEvent = Record<string, unknown> & {
-	video: string;
+	clipName: string;
 	n?: unknown;
 	key?: unknown;
 	begin?: unknown;
@@ -20,24 +20,29 @@ type ClipEvent = Record<string, unknown> & {
 
 type PlayPicture = (request: PictureRequest) => void;
 
-const clipUrls = import.meta.glob<string>("./videos/*.mp4", {
+const playbackUrls = import.meta.glob<string>("../library/playback/*.mp4", {
 	query: "?url",
 	import: "default",
 	eager: true
 });
 
-export const videos: Record<string, Video> = Object.fromEntries(
-	Object.entries(clips).flatMap(([name, clip]): [string, Video][] => {
-		const file = clipUrls[`./videos/${clip.file}`];
-		if (!file) {
-			console.warn(`Clip "${name}": file src/videos/${clip.file} is missing.`);
+const clipLibrary: ClipLibrary = library;
+
+export const clips: Record<string, Clip> = Object.fromEntries(
+	Object.entries(clipLibrary).flatMap(([clipName, info]): [string, Clip][] => {
+		const url = playbackUrls[`../library/playback/${info.playbackFile}`];
+		if (!url) {
+			console.warn(`Clip "${clipName}": library/playback/${info.playbackFile} is missing.`);
 			return [];
 		}
-		return [[name, { ...clip, file }]];
+		return [[clipName, { ...info, url }]];
 	})
 );
 
-export const soundName = (video: string) => `vid_${video}`;
+export const clipUrls = (): Record<string, string> =>
+	Object.fromEntries(Object.entries(clips).map(([clipName, clip]) => [clipName, clip.url]));
+
+const soundName = (clipName: string) => `vid_${clipName}`;
 
 const reportedProblems = new Set<string>();
 
@@ -48,16 +53,16 @@ function reportOnce(message: string) {
 }
 
 function clipEvent(value: string | [string, number]): ClipEvent {
-	const [video, n] = Array.isArray(value) ? value : [value];
-	return { video, ...(n !== undefined && { n }) };
+	const [clipName, n] = Array.isArray(value) ? value : [value];
+	return { clipName, ...(n !== undefined && { n }) };
 }
 
-function playbackRate(event: ClipEvent, clip: Video): number {
+function playbackRate(event: ClipEvent, clip: Clip): number {
 	const speed = typeof event.speed === "number" ? event.speed : 1;
 	return event.unit === "c" ? speed * clip.durationSeconds : speed;
 }
 
-function triggerVideo(
+function triggerClip(
 	scope: StrudelScope,
 	playPicture: PlayPicture,
 	hap: Hap<ClipEvent>,
@@ -65,9 +70,9 @@ function triggerVideo(
 	targetTime: number
 ) {
 	const event = hap.value;
-	const clip = videos[event.video];
+	const clip = clips[event.clipName];
 	if (!clip) {
-		reportOnce(`Unknown clip "${event.video}". Known clips: ${Object.keys(videos).join(", ")}`);
+		reportOnce(`Unknown clip "${event.clipName}". Known clips: ${Object.keys(clips).join(", ")}`);
 		return;
 	}
 
@@ -81,7 +86,7 @@ function triggerVideo(
 	if (!range) {
 		const found = [...new Set(clip.sections.map((section) => section.key))].join(", ");
 		reportOnce(
-			`Clip "${event.video}" has no sections in ${normaliseKey(event.key)}. Keys found: ${found}`
+			`Clip "${event.clipName}" has no sections in ${normaliseKey(event.key)}. Keys found: ${found}`
 		);
 		return;
 	}
@@ -94,12 +99,12 @@ function triggerVideo(
 	const durationSeconds = Math.min(hap.duration.valueOf() / cps, sliceSeconds);
 	const toFraction = (seconds: number) => seconds / clip.durationSeconds;
 
-	const { video, key, seek, ...soundControls } = event;
+	const { clipName, key, seek, ...soundControls } = event;
 	scope
 		.superdough(
 			{
 				...soundControls,
-				s: soundName(video),
+				s: soundName(clipName),
 				n: 0,
 				begin: toFraction(
 					isReversed ? clip.durationSeconds - range.endSeconds : range.startSeconds
@@ -112,10 +117,10 @@ function triggerVideo(
 			cps,
 			hap.whole?.begin.valueOf()
 		)
-		.catch((error) => reportOnce(`Audio for "${video}" failed: ${error}`));
+		.catch((error) => reportOnce(`Audio for "${clipName}" failed: ${error}`));
 
 	playPicture({
-		video,
+		clipName,
 		startAt: targetTime,
 		mediaStartSeconds: isReversed ? range.endSeconds : range.startSeconds,
 		rate,
@@ -125,13 +130,15 @@ function triggerVideo(
 
 function registerClipSounds(scope: StrudelScope) {
 	scope.samples(
-		Object.fromEntries(Object.entries(videos).map(([name, video]) => [soundName(name), video.file]))
+		Object.fromEntries(
+			Object.entries(clips).map(([clipName, clip]) => [soundName(clipName), clip.url])
+		)
 	);
 	const context = scope.getAudioContext();
-	for (const [name, video] of Object.entries(videos)) {
+	for (const [clipName, clip] of Object.entries(clips)) {
 		scope
-			.loadBuffer(video.file, context, soundName(name))
-			.catch((error) => console.error(`Audio for "${name}" did not load:`, error));
+			.loadBuffer(clip.url, context, soundName(clipName))
+			.catch((error) => console.error(`Audio for "${clipName}" did not load:`, error));
 	}
 }
 
@@ -152,9 +159,9 @@ export function setupStrudel(playPicture: PlayPicture) {
 			.fmap(clipEvent)
 			.seek(seconds)
 			.onTrigger((hap, _currentTime, cps, targetTime) =>
-				triggerVideo(scope, playPicture, hap, cps, targetTime)
+				triggerClip(scope, playPicture, hap, cps, targetTime)
 			);
 
-	Object.assign(globalThis, { clips: videos, vid });
+	Object.assign(globalThis, { clips, vid });
 	return scope;
 }

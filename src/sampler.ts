@@ -1,11 +1,9 @@
-import { type Clip, loadClip, sampleIndexAt } from "./clip";
+import { type ClipMedia, loadClipMedia, sampleIndexAt } from "./clip-media";
 import { ClipDecoder } from "./clip-decoder";
 import { Compositor, type DrawItem } from "./compositor";
 
-export type VideoConfig = { file: string };
-
 export type PictureRequest = {
-	video: string;
+	clipName: string;
 	startAt: number;
 	mediaStartSeconds: number;
 	rate: number;
@@ -16,15 +14,15 @@ const MAX_VOICES = 32;
 const FRAME_LEAD_MS = 25;
 const RENDER_SCALE = 0.8;
 
-type LoadedVideo = {
-	clip: Clip;
+type LoadedClip = {
+	media: ClipMedia;
 	decoder: ClipDecoder;
 };
 
 type Placement = { xFraction: number; yFraction: number };
 
 type Voice = {
-	video: LoadedVideo;
+	clip: LoadedClip;
 	placement: Placement;
 	startAt: number;
 	stopAt: number;
@@ -39,14 +37,14 @@ type Voice = {
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
-function secondsUntilClipEdge(video: LoadedVideo, mediaStartSeconds: number, rate: number) {
-	const remaining = rate > 0 ? video.clip.durationSeconds - mediaStartSeconds : mediaStartSeconds;
+function secondsUntilClipEdge(clip: LoadedClip, mediaStartSeconds: number, rate: number) {
+	const remaining = rate > 0 ? clip.media.durationSeconds - mediaStartSeconds : mediaStartSeconds;
 	return remaining / Math.abs(rate);
 }
 
 export class VideoSampler {
 	private readonly compositor: Compositor;
-	private readonly videos = new Map<string, LoadedVideo>();
+	private readonly clips = new Map<string, LoadedClip>();
 	private readonly placements = new Map<string, Placement>();
 	private getClock: (() => AudioContext) | null = null;
 	private voices: Voice[] = [];
@@ -56,11 +54,11 @@ export class VideoSampler {
 		this.compositor = new Compositor(canvas);
 	}
 
-	async load(configs: Record<string, VideoConfig>) {
+	async load(urls: Record<string, string>) {
 		const results = await Promise.allSettled(
-			Object.entries(configs).map(async ([name, config]) => {
-				const clip = await loadClip(config.file);
-				this.videos.set(name, { clip, decoder: new ClipDecoder(clip) });
+			Object.entries(urls).map(async ([clipName, url]) => {
+				const media = await loadClipMedia(url);
+				this.clips.set(clipName, { media, decoder: new ClipDecoder(media) });
 			})
 		);
 		for (const result of results) {
@@ -78,7 +76,7 @@ export class VideoSampler {
 
 	stop() {
 		cancelAnimationFrame(this.animationFrame);
-		for (const video of this.videos.values()) video.decoder.close();
+		for (const clip of this.clips.values()) clip.decoder.close();
 	}
 
 	resize(width: number, height: number) {
@@ -86,20 +84,20 @@ export class VideoSampler {
 	}
 
 	play(request: PictureRequest) {
-		const video = this.videos.get(request.video);
-		if (!video || request.rate === 0) return;
+		const clip = this.clips.get(request.clipName);
+		if (!clip || request.rate === 0) return;
 
 		if (this.voices.length >= MAX_VOICES) this.disposeVoice(this.voices.shift()!);
 
-		const mediaStartSeconds = clamp(request.mediaStartSeconds, 0, video.clip.durationSeconds);
+		const mediaStartSeconds = clamp(request.mediaStartSeconds, 0, clip.media.durationSeconds);
 		const durationSeconds = Math.min(
 			request.durationSeconds,
-			secondsUntilClipEdge(video, mediaStartSeconds, request.rate)
+			secondsUntilClipEdge(clip, mediaStartSeconds, request.rate)
 		);
 
 		this.voices.push({
-			video,
-			placement: this.placementFor(request.video, mediaStartSeconds),
+			clip,
+			placement: this.placementFor(request.clipName, mediaStartSeconds),
 			startAt: request.startAt,
 			stopAt: request.startAt + durationSeconds,
 			mediaStartSeconds,
@@ -155,9 +153,9 @@ export class VideoSampler {
 		const mediaSeconds = clamp(
 			voice.mediaStartSeconds + elapsedSeconds * voice.rate,
 			0,
-			voice.video.clip.durationSeconds
+			voice.clip.media.durationSeconds
 		);
-		voice.plannedSample = sampleIndexAt(voice.video.clip, mediaSeconds * 1_000_000);
+		voice.plannedSample = sampleIndexAt(voice.clip.media, mediaSeconds * 1_000_000);
 		this.decodePlannedFrame(voice);
 	}
 
@@ -167,7 +165,7 @@ export class VideoSampler {
 		const sampleIndex = voice.plannedSample;
 		voice.isDecoding = true;
 
-		voice.video.decoder.decode(sampleIndex).then(
+		voice.clip.decoder.decode(sampleIndex).then(
 			(frame) => {
 				if (!voice.isRemoved) {
 					this.compositor.upload(voice.texture, frame);
@@ -184,8 +182,8 @@ export class VideoSampler {
 	}
 
 	private drawItem(voice: Voice): DrawItem {
-		const width = voice.video.clip.width * RENDER_SCALE;
-		const height = voice.video.clip.height * RENDER_SCALE;
+		const width = voice.clip.media.width * RENDER_SCALE;
+		const height = voice.clip.media.height * RENDER_SCALE;
 		return {
 			texture: voice.texture,
 			width,
@@ -195,8 +193,8 @@ export class VideoSampler {
 		};
 	}
 
-	private placementFor(video: string, mediaStartSeconds: number): Placement {
-		const key = `${video}@${mediaStartSeconds}`;
+	private placementFor(clipName: string, mediaStartSeconds: number): Placement {
+		const key = `${clipName}@${mediaStartSeconds}`;
 		let placement = this.placements.get(key);
 		if (!placement) {
 			placement = { xFraction: Math.random(), yFraction: Math.random() };

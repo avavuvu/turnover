@@ -1,24 +1,14 @@
-import { mkdirSync, renameSync } from "node:fs";
+import { copyFileSync, mkdirSync, renameSync, rmSync } from "node:fs";
 import { basename, extname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 
+import type { ClipInfo, EncodeSettings } from "../src/clip-info";
 import { analyseKey } from "./lib/key";
-import {
-	assertValidName,
-	type ClipEntry,
-	nameFromTitle,
-	readLibrary,
-	writeLibrary
-} from "./lib/library";
-import { decodeMonoAudio, encodeAllIntra, probeVideo } from "./lib/media";
+import { assertValidName, nameFromTitle, readLibrary, writeLibrary } from "./lib/library";
+import { decodeMonoAudio, encodeAllIntra, hasAudio, probeVideo } from "./lib/media";
+import { LIBRARY_FILE, ORIGINALS_DIR, PLAYBACK_DIR } from "./lib/paths";
 import { estimateTempo } from "./lib/tempo";
 import { downloadVideo, isUrl } from "./lib/youtube";
-
-const EDITOR_DIR = fileURLToPath(new URL("..", import.meta.url));
-const VIDEOS_DIR = join(EDITOR_DIR, "src", "videos");
-const SOURCES_DIR = join(EDITOR_DIR, "sources");
-const LIBRARY_FILE = join(VIDEOS_DIR, "clips.json");
 
 const DEFAULT_MAX_HEIGHT = 360;
 
@@ -29,7 +19,8 @@ const LOW_CONFIDENCE = 0.6;
 const USAGE = `Usage: bun run add-clip <youtube-url | video-file> [options]
 
 Downloads (or reads) a video, encodes it for fast seeking, finds the key,
-tuning, and tempo, and adds it to src/videos/clips.json.
+tuning, and tempo, and adds it to library/clips.json. The original is kept in
+library/originals/ so the clip can be rebuilt with "bun run rebuild-clips".
 
 Options:
   --name <name>      Clip name for vid("<name>"). Lowercase letters and digits.
@@ -90,9 +81,11 @@ function readOptions() {
 		input: positionals[0],
 		name: values.name,
 		title: values.title,
-		startSeconds,
-		endSeconds,
-		maxHeight: parseInteger(values.height, "--height") ?? DEFAULT_MAX_HEIGHT,
+		encode: {
+			maxHeight: parseInteger(values.height, "--height") ?? DEFAULT_MAX_HEIGHT,
+			startSeconds,
+			endSeconds
+		} satisfies EncodeSettings,
 
 		force: values.force
 	};
@@ -102,7 +95,7 @@ function step(message: string) {
 	console.log(`\n▸ ${message}`);
 }
 
-function printSummary(name: string, clip: ClipEntry) {
+function printSummary(name: string, clip: ClipInfo) {
 	const tempo =
 		clip.tempoBpm === null
 			? "not found"
@@ -142,23 +135,23 @@ function main() {
 		}
 	}
 
-	mkdirSync(VIDEOS_DIR, { recursive: true });
-	mkdirSync(SOURCES_DIR, { recursive: true });
+	mkdirSync(ORIGINALS_DIR, { recursive: true });
+	mkdirSync(PLAYBACK_DIR, { recursive: true });
 
-	let sourceFile: string;
+	let inputFile: string;
 	let title: string;
 	let sourceUrl: string | undefined;
 	let uploader: string | undefined;
 
 	if (isUrl(options.input)) {
 		step(`Downloading ${options.input}`);
-		const download = downloadVideo(options.input, SOURCES_DIR, options.maxHeight);
+		const download = downloadVideo(options.input, ORIGINALS_DIR, options.encode.maxHeight);
 		({ title, uploader } = download);
 		sourceUrl = download.url;
-		sourceFile = download.file;
+		inputFile = download.file;
 	} else {
-		sourceFile = resolve(options.input);
-		title = basename(sourceFile, extname(sourceFile));
+		inputFile = resolve(options.input);
+		title = basename(inputFile, extname(inputFile));
 	}
 	title = options.title ?? title;
 
@@ -166,45 +159,56 @@ function main() {
 	assertValidName(name);
 	const previous = library[name];
 
-	if (isUrl(options.input)) {
-		const namedSource = join(SOURCES_DIR, `${name}${extname(sourceFile)}`);
-		renameSync(sourceFile, namedSource);
-		sourceFile = namedSource;
+	if (!hasAudio(inputFile)) {
+		throw new Error(`${basename(inputFile)} has no audio track. Clips need audio.`);
 	}
 
-	const clipFile = `${name}.mp4`;
-	const outputPath = join(VIDEOS_DIR, clipFile);
-	const partialPath = `${outputPath}.partial`;
+	const originalFile = `${name}${extname(inputFile)}`;
+	const originalPath = join(ORIGINALS_DIR, originalFile);
+	if (inputFile !== originalPath) {
+		if (isUrl(options.input)) renameSync(inputFile, originalPath);
+		else copyFileSync(inputFile, originalPath);
+	}
 
-	step(`Encoding ${basename(sourceFile)} as all-intra H.264 (max ${options.maxHeight} px high)`);
-	encodeAllIntra(sourceFile, partialPath, options);
-	renameSync(partialPath, outputPath);
+	const playbackFile = `${name}.mp4`;
+	const playbackPath = join(PLAYBACK_DIR, playbackFile);
+	const partialPath = `${playbackPath}.partial`;
 
-	step("Finding key, tuning, and tempo");
-	const video = probeVideo(outputPath);
-	const samples = decodeMonoAudio(outputPath, ANALYSIS_SAMPLE_RATE);
-	const keyAnalysis = analyseKey(samples, ANALYSIS_SAMPLE_RATE);
-	const tempo = estimateTempo(samples, ANALYSIS_SAMPLE_RATE);
+	try {
+		step(`Encoding ${originalFile} as all-intra H.264 (max ${options.encode.maxHeight} px high)`);
+		encodeAllIntra(originalPath, partialPath, options.encode);
 
-	const clip: ClipEntry = {
-		file: clipFile,
-		title,
-		source: sourceUrl ?? previous?.source,
-		uploader: uploader ?? previous?.uploader,
-		...video,
-		tempoBpm: tempo?.bpm ?? null,
-		tempoConfidence: tempo?.confidence ?? null,
-		key: keyAnalysis.overall.key,
-		camelot: keyAnalysis.overall.camelot,
-		keyConfidence: keyAnalysis.overall.confidence,
-		alternativeKey: keyAnalysis.overall.alternativeKey,
-		tuningCents: keyAnalysis.tuningCents,
-		sections: keyAnalysis.sections
-	};
+		step("Finding key, tuning, and tempo");
+		const video = probeVideo(partialPath);
+		const samples = decodeMonoAudio(partialPath, ANALYSIS_SAMPLE_RATE);
+		const keyAnalysis = analyseKey(samples, ANALYSIS_SAMPLE_RATE);
+		const tempo = estimateTempo(samples, ANALYSIS_SAMPLE_RATE);
 
-	library[name] = clip;
-	writeLibrary(LIBRARY_FILE, library);
-	printSummary(name, clip);
+		const clip: ClipInfo = {
+			title,
+			source: sourceUrl ?? previous?.source,
+			uploader: uploader ?? previous?.uploader,
+			originalFile,
+			playbackFile,
+			encode: options.encode,
+			...video,
+			tempoBpm: tempo?.bpm ?? null,
+			tempoConfidence: tempo?.confidence ?? null,
+			key: keyAnalysis.overall.key,
+			camelot: keyAnalysis.overall.camelot,
+			keyConfidence: keyAnalysis.overall.confidence,
+			alternativeKey: keyAnalysis.overall.alternativeKey,
+			tuningCents: keyAnalysis.tuningCents,
+			sections: keyAnalysis.sections
+		};
+
+		renameSync(partialPath, playbackPath);
+		library[name] = clip;
+		writeLibrary(LIBRARY_FILE, library);
+		printSummary(name, clip);
+	} finally {
+		rmSync(partialPath, { force: true });
+	}
 }
 
 try {

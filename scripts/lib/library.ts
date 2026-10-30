@@ -1,26 +1,5 @@
 import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import type { KeySection } from "./key";
-
-export type ClipEntry = {
-	file: string;
-	title: string;
-	source?: string;
-	uploader?: string;
-	durationSeconds: number;
-	width: number;
-	height: number;
-	fps: number;
-	tempoBpm: number | null;
-	tempoConfidence: number | null;
-	key: string;
-	camelot: string;
-	keyConfidence: number;
-	alternativeKey: string;
-	tuningCents: number;
-	sections: KeySection[];
-};
-
-export type ClipLibrary = Record<string, ClipEntry>;
+import type { ClipLibrary } from "../../src/clip-info";
 
 const MAX_GENERATED_NAME_LENGTH = 12;
 const VALID_NAME = /^[a-z][a-z0-9]*$/;

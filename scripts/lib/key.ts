@@ -1,4 +1,5 @@
 import { Range } from "@tonaljs/tonal";
+import type { KeySection } from "../../src/clip-info";
 import { SpectrumAnalyser } from "./fft";
 
 const PITCH_CLASSES = Range.chromatic(["C0", "B0"], { sharps: true, pitchClass: true });
@@ -26,13 +27,6 @@ export type KeyEstimate = {
 	camelot: string;
 	confidence: number;
 	alternativeKey: string;
-};
-
-export type KeySection = {
-	start: number;
-	end: number;
-	key: string;
-	confidence: number;
 };
 
 export type KeyAnalysis = {
