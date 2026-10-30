@@ -29,8 +29,7 @@ export type ClipInfo = {
 	tempoConfidence: number | null;
 	key: string;
 	camelot: string;
-	keyConfidence: number;
-	alternativeKey: string;
+	keyConfidence: number | null;
 	tuningCents: number;
 	sections: KeySection[];
 };

@@ -15,15 +15,23 @@ bun run dev
 
 ## Adding clips
 
-| Command                                          | What it does              |
-| ------------------------------------------------ | ------------------------- |
-| `bun run add-clip https://youtube.com/watch?v=…` | Download from YouTube     |
-| `bun run add-clip ~/Videos/set.mp4 --name set`   | Use a local file          |
-| `bun run add-clip <url> --start 1:15 --end 2:30` | Keep only part of a video |
+| Command                                          | What it does                   |
+| ------------------------------------------------ | ------------------------------ |
+| `bun run add-clip https://youtube.com/watch?v=…` | Download from YouTube          |
+| `bun run add-clip ~/Videos/set.mp4 --name set`   | Use a local file               |
+| `bun run add-clip <url> --start 1:15 --end 2:30` | Keep only part of a video      |
+| `bun run add-clip <url> --key Em --bpm 95.4`     | Set the key and tempo yourself |
 
 This keeps the original, makes a playback copy where every frame is a keyframe (so any
-moment can be shown instantly), and finds the key, tuning, and tempo. Run
-`bun run add-clip --help` for all options.
+moment can be shown instantly), and finds the key, tuning, and tempo with
+[Essentia.js](https://mtg.github.io/essentia.js/). Run `bun run add-clip --help` for all options.
+
+Detection is a guess, especially for speech, live sets, and very short clips. When you set the
+key or tempo yourself, its confidence is stored as `null`. Key sections are always detected, so
+`.key()` follows what the detector heard.
+
+Bun 1.1 splits quoted arguments passed through `bun run`. For a value with spaces, such as
+`--title "Live at Home"`, run `bun scripts/add-clip.ts` instead.
 
 ## The library
 
