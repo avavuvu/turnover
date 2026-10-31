@@ -4,5 +4,5 @@
 		"lib": ["ES2022"],
 		"types": ["node"]
 	},
-	"include": [".", "../src/clip-info.ts", "../src/clip-position.ts"]
+	"include": [".", "../src/library/clip-info.ts", "../src/library/clip-position.ts"]
 }

@@ -1,19 +1,24 @@
-import type { EncodeSettings } from "../../src/clip-info";
-import { runBinary, runText, runVisible } from "./run";
+import { runBinary, runText, runVisible } from "./run"
+
+export type EncodeSettings = {
+	maxHeight: number
+	startSeconds?: number
+	endSeconds?: number
+}
 
 export type VideoProbe = {
-	width: number;
-	height: number;
-	fps: number;
-	durationSeconds: number;
-};
+	width: number
+	height: number
+	fps: number
+	durationSeconds: number
+}
 
-export function encodeAllIntra(input: string, output: string, settings: EncodeSettings) {
+export const encodeAllIntra = (input: string, output: string, settings: EncodeSettings) => {
 	const trim = [
 		...(settings.startSeconds !== undefined ? ["-ss", String(settings.startSeconds)] : []),
 		...(settings.endSeconds !== undefined ? ["-to", String(settings.endSeconds)] : [])
-	];
-	const scale = `scale=-2:'trunc(min(${settings.maxHeight},ih)/2)*2',setsar=1`;
+	]
+	const scale = `scale=-2:'trunc(min(${settings.maxHeight},ih)/2)*2',setsar=1`
 
 	runVisible("ffmpeg", [
 		"-hide_banner",
@@ -53,10 +58,10 @@ export function encodeAllIntra(input: string, output: string, settings: EncodeSe
 		"-f",
 		"mp4",
 		output
-	]);
+	])
 }
 
-export function hasAudio(file: string): boolean {
+export const hasAudio = (file: string): boolean => {
 	const output = runText("ffprobe", [
 		"-v",
 		"error",
@@ -67,11 +72,11 @@ export function hasAudio(file: string): boolean {
 		"-of",
 		"csv=p=0",
 		file
-	]);
-	return output.trim().length > 0;
+	])
+	return output.trim().length > 0
 }
 
-export function probeVideo(file: string): VideoProbe {
+export const probeVideo = (file: string): VideoProbe => {
 	const json = JSON.parse(
 		runText("ffprobe", [
 			"-v",
@@ -84,20 +89,20 @@ export function probeVideo(file: string): VideoProbe {
 			"json",
 			file
 		])
-	);
-	const stream = json.streams?.[0];
-	if (!stream) throw new Error(`${file}: no video stream`);
+	)
+	const stream = json.streams?.[0]
+	if (!stream) throw new Error(`${file}: no video stream`)
 
-	const [numerator, denominator] = String(stream.avg_frame_rate).split("/").map(Number);
+	const [numerator, denominator] = String(stream.avg_frame_rate).split("/").map(Number)
 	return {
 		width: stream.width,
 		height: stream.height,
 		fps: Number((numerator / (denominator || 1)).toFixed(3)),
 		durationSeconds: Number(Number(json.format.duration).toFixed(3))
-	};
+	}
 }
 
-export function decodeMonoAudio(file: string, sampleRate: number): Float32Array {
+export const decodeMonoAudio = (file: string, sampleRate: number): Float32Array => {
 	const pcm = runBinary("ffmpeg", [
 		"-v",
 		"error",
@@ -111,6 +116,6 @@ export function decodeMonoAudio(file: string, sampleRate: number): Float32Array 
 		"-f",
 		"f32le",
 		"pipe:1"
-	]);
-	return new Float32Array(pcm.buffer.slice(pcm.byteOffset, pcm.byteOffset + pcm.byteLength));
+	])
+	return new Float32Array(pcm.buffer.slice(pcm.byteOffset, pcm.byteOffset + pcm.byteLength))
 }

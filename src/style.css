@@ -57,11 +57,11 @@ strudel-editor + div {
 }
 
 #status .status-warning {
-	color: #f5c451;
+	color: orange;
 }
 
 #status .status-error {
-	color: #ff7a7a;
+	color: red;
 	cursor: pointer;
 	pointer-events: auto;
 }

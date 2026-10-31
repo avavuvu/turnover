@@ -1,11 +1,11 @@
 import type { ClipInfo, ClipLibrary } from "./clip-info";
-import { fetchFile } from "./fetch-file";
+import { fetchFile } from "../fetch-file";
 
 export type Clip = ClipInfo & { url: string };
 
 const LIBRARY_URL = new URL("library/", document.baseURI);
 
-export async function loadLibrary(): Promise<Record<string, Clip>> {
+export const loadLibrary = async (): Promise<Record<string, Clip>> => {
 	const libraryFile = new URL("clips.json", LIBRARY_URL).href;
 	const response = await fetchFile(libraryFile).catch(() => {
 		throw new Error('No clip library found. Add a clip with "bun run add-clip".');

@@ -1,4 +1,5 @@
-import { Note, Scale } from "@tonaljs/tonal";
+import * as Note from "@tonaljs/note";
+import * as Scale from "@tonaljs/scale";
 
 export type ClipTimeline = {
 	durationSeconds: number;
@@ -27,17 +28,17 @@ const SHORT_KEY = /^([a-g][#b]*)(m?)$/i;
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
-function toNumber(value: unknown, fallback: number): number {
+const toNumber = (value: unknown, fallback: number): number => {
 	const number = Number(value);
 	return value === undefined || value === null || !Number.isFinite(number) ? fallback : number;
 }
 
-function toScaleName(text: string): string {
+const toScaleName = (text: string): string => {
 	const short = SHORT_KEY.exec(text);
 	return short ? `${short[1]} ${short[2] ? "minor" : "major"}` : text;
 }
 
-export function normaliseKey(value: unknown): string {
+export const normaliseKey = (value: unknown): string => {
 	const text = (Array.isArray(value) ? value.join(" ") : String(value))
 		.replace(/[:\s]+/g, " ")
 		.trim();
@@ -52,13 +53,13 @@ export function normaliseKey(value: unknown): string {
 	return `${Note.pitchClass(Note.fromMidiSharps(chroma))} ${scale.type}`;
 }
 
-function regionsInKey(timeline: ClipTimeline, key: unknown): Region[] {
+const regionsInKey = (timeline: ClipTimeline, key: unknown): Region[] => {
 	if (key === undefined) return [{ start: 0, end: timeline.durationSeconds }];
 	const wanted = normaliseKey(key);
 	return timeline.sections.filter((section) => section.key === wanted);
 }
 
-function cuePoints(regions: Region[]): Cue[] {
+const cuePoints = (regions: Region[]): Cue[] => {
 	return regions.flatMap((region) => {
 		const cues: Cue[] = [];
 		for (let time = region.start; time < region.end; time += CUE_SPACING_SECONDS) {
@@ -68,10 +69,10 @@ function cuePoints(regions: Region[]): Cue[] {
 	});
 }
 
-export function resolvePlaybackRange(
+export const resolvePlaybackRange = (
 	timeline: ClipTimeline,
 	controls: PositionControls
-): PlaybackRange | null {
+): PlaybackRange | null => {
 	const cues = cuePoints(regionsInKey(timeline, controls.key));
 	if (cues.length === 0) return null;
 

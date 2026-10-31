@@ -1,27 +1,34 @@
 {
-	"name": "editor",
+	"name": "turnover",
 	"private": true,
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"type": "module",
 	"scripts": {
 		"dev": "vite",
 		"build": "vite build",
 		"preview": "vite preview",
 		"add-clip": "bun scripts/add-clip.ts",
-		"rebuild-clips": "bun scripts/rebuild-clips.ts",
+		"remove-clip": "bun scripts/remove-clip.ts",
+		"list-clips": "bun scripts/list-clips.ts",
 		"check": "tsc --noEmit && tsc --noEmit -p scripts",
-		"lint": "prettier --check .",
+		"lint": "eslint . && prettier --check .",
 		"format": "prettier --write ."
 	},
 	"devDependencies": {
+		"@eslint/js": "^10.0.1",
 		"@types/node": "^26.6.6",
+		"eslint": "^10.14.0",
+		"eslint-config-prettier": "^10.1.8",
+		"globals": "^17.13.0",
 		"prettier": "^3.8.1",
 		"typescript": "^6.0.2",
+		"typescript-eslint": "^8.72.1",
 		"vite": "^8.0.7"
 	},
 	"dependencies": {
 		"@strudel/repl": "^1.3.0",
-		"@tonaljs/tonal": "^4.10.0",
+		"@tonaljs/note": "^4.12.3",
+		"@tonaljs/scale": "^4.13.6",
 		"commander": "15.0.0",
 		"essentia.js": "0.1.3",
 		"mediabunny": "1.64.0"

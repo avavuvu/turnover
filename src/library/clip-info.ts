@@ -5,20 +5,11 @@ export type KeySection = {
 	confidence: number;
 };
 
-export type EncodeSettings = {
-	maxHeight: number;
-	startSeconds?: number;
-	endSeconds?: number;
-};
-
 export type ClipInfo = {
 	title: string;
 	source?: string;
 	uploader?: string;
-
-	originalFile: string;
 	playbackFile: string;
-	encode: EncodeSettings;
 
 	width: number;
 	height: number;
